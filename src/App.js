@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import axios from "axios";
 
-import authors from "./data.js";
+// import authors from "./data.js";
 
 // Components
 import Sidebar from "./Sidebar";
@@ -14,15 +14,29 @@ class App extends Component {
     super(props);
     this.state = {
       currentAuthor: {},
-      filteredAuthors: []
+      filteredAuthors: [],
+      authors: [],
+      loading: true
     };
     this.selectAuthor = this.selectAuthor.bind(this);
     this.unselectAuthor = this.unselectAuthor.bind(this);
     this.filterAuthors = this.filterAuthors.bind(this);
   }
+  componentDidMount() {
+    axios
+      .get("https://the-index-api.herokuapp.com/api/authors/")
+      .then(res => res.data)
+      .then(incomingData => this.setState({ authors: incomingData }))
+      .then(this.setState({ loading: false }));
+  }
 
   selectAuthor(author) {
-    this.setState({ currentAuthor: author });
+    this.setState({ loading: true });
+    axios
+      .get(`https://the-index-api.herokuapp.com/api/authors/${author.id}/`)
+      .then(res => res.data)
+      .then(detail => this.setState({ currentAuthor: detail, loading: false }));
+    //.then(this.setState({ loading: false }));
   }
 
   unselectAuthor() {
@@ -31,24 +45,33 @@ class App extends Component {
 
   filterAuthors(query) {
     query = query.toLowerCase();
-    let filteredAuthors = authors.filter(author => {
+    let filteredAuthors = this.state.authors.filter(author => {
       return `${author.first_name} ${author.last_name}`.includes(query);
     });
     this.setState({ filteredAuthors: filteredAuthors });
   }
 
   getContentView() {
-    if (this.state.currentAuthor.first_name) {
-      return <AuthorDetail author={this.state.currentAuthor} />;
-    } else if (this.state.filteredAuthors[0]) {
-      return (
-        <AuthorsList
-          authors={this.state.filteredAuthors}
-          selectAuthor={this.selectAuthor}
-        />
-      );
+    if (this.state.loading === true) {
+      return <div>page is loading</div>;
     } else {
-      return <AuthorsList authors={authors} selectAuthor={this.selectAuthor} />;
+      if (this.state.currentAuthor.first_name) {
+        return <AuthorDetail author={this.state.currentAuthor} />;
+      } else if (this.state.filteredAuthors[0]) {
+        return (
+          <AuthorsList
+            authors={this.state.filteredAuthors}
+            selectAuthor={this.selectAuthor}
+          />
+        );
+      } else {
+        return (
+          <AuthorsList
+            authors={this.state.authors}
+            selectAuthor={this.selectAuthor}
+          />
+        );
+      }
     }
   }
 
